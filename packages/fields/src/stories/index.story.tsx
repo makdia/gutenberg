@@ -2,13 +2,8 @@
  * WordPress dependencies
  */
 import { useState } from '@wordpress/element';
-import type {
-	Field,
-	View,
-	DataForm,
-	DataViews,
-	type Form,
-} from '@wordpress/dataviews';
+import type { Field, View, Form } from '@wordpress/dataviews';
+import { DataForm, DataViews } from '@wordpress/dataviews';
 
 /**
  * Internal dependencies

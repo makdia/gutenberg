@@ -1,8 +1,10 @@
-import type {
-	ResolvedSelection,
+import {
 	privateApis as coreDataPrivateApis,
 	SelectionType,
-	type PostEditorAwarenessState as ActiveCollaborator,
+} from '@wordpress/core-data';
+import type {
+	ResolvedSelection,
+	PostEditorAwarenessState as ActiveCollaborator,
 } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
