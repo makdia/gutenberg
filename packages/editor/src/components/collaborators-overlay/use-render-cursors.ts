@@ -1,4 +1,5 @@
-import {
+import type {
+	ResolvedSelection,
 	privateApis as coreDataPrivateApis,
 	SelectionType,
 	type PostEditorAwarenessState as ActiveCollaborator,
@@ -6,7 +7,6 @@ import {
 import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { store as preferencesStore } from '@wordpress/preferences';
-import type { ResolvedSelection } from '@wordpress/core-data';
 
 import { unlock } from '../../lock-unlock';
 import { getAvatarUrl } from './get-avatar-url';
