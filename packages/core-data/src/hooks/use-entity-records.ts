@@ -163,6 +163,7 @@ export function __experimentalUseEntityRecords(
 		alternative: 'wp.data.useEntityRecords',
 		since: '6.1',
 	} );
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	return useEntityRecords( kind, name, queryArgs, options );
 }
 

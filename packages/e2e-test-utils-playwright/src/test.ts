@@ -1,3 +1,6 @@
+// Playwright fixtures use `use()` which is not a React hook.
+/* eslint-disable react-hooks/rules-of-hooks */
+
 /**
  * External dependencies
  */
@@ -198,5 +201,6 @@ const test = base.extend<
 		await use( new Metrics( { page } ) );
 	},
 } );
+/* eslint-enable react-hooks/rules-of-hooks */
 
 export { test, expect };

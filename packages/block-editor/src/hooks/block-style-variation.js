@@ -74,6 +74,7 @@ function OverrideStyles( { override } ) {
  * @return {React.JSX.Element}  An array of new block variation overrides.
  */
 export function __unstableBlockStyleVariationOverridesWithConfig( { config } ) {
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const { getBlockStyles, overrides } = useSelect(
 		( select ) => ( {
 			getBlockStyles: select( blocksStore ).getBlockStyles,
@@ -81,8 +82,10 @@ export function __unstableBlockStyleVariationOverridesWithConfig( { config } ) {
 		} ),
 		[]
 	);
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const { getBlockName } = useSelect( blockEditorStore );
 
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const overridesWithConfig = useMemo( () => {
 		if ( ! overrides?.length ) {
 			return;

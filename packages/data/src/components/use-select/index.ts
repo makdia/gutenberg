@@ -228,6 +228,7 @@ function Store( registry: DataRegistry, suspense: boolean ) {
 }
 
 function _useStaticSelect( storeName: StoreDescriptor< AnyConfig > | string ) {
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	return useRegistry().select( storeName );
 }
 
@@ -236,8 +237,11 @@ function _useMappingSelect(
 	mapSelect: MapSelect,
 	deps: unknown[]
 ) {
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const registry = useRegistry();
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const isAsync = useAsyncMode();
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const store = useMemo(
 		() => Store( registry, suspense ),
 		[ registry, suspense ]
@@ -245,10 +249,12 @@ function _useMappingSelect(
 
 	// These are "pass-through" dependencies from the parent hook,
 	// and the parent should catch any hook rule violations.
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+	// eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/rules-of-hooks
 	const selector = useCallback( mapSelect, deps );
 	const { subscribe, getValue } = store( selector, isAsync );
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const result = useSyncExternalStore( subscribe, getValue, getValue );
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	useDebugValue( result );
 	return result;
 }

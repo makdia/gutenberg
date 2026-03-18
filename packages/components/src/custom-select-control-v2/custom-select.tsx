@@ -103,6 +103,7 @@ function _CustomSelect(
 	} = props;
 
 	const onSelectPopoverKeyDown: React.KeyboardEventHandler< HTMLDivElement > =
+		// eslint-disable-next-line react-hooks/rules-of-hooks
 		useCallback(
 			( e ) => {
 				if ( isLegacy ) {
@@ -112,6 +113,7 @@ function _CustomSelect(
 			[ isLegacy ]
 		);
 
+	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const contextValue = useMemo( () => ( { store, size } ), [ store, size ] );
 
 	return (
