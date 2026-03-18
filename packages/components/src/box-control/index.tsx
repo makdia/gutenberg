@@ -101,6 +101,7 @@ function BoxControl( {
 		! hasInitialValue || ! isValueMixed( inputValues ) || hasOneSide
 	);
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [ side, setSide ] = useState< BoxControlIconProps[ 'side' ] >(
 		getInitialSide( isLinked, splitOnAxis )
 	);

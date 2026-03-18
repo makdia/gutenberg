@@ -172,6 +172,7 @@ const style = `
 
 const EMPTY_ARRAY = [];
 
+// eslint-disable-next-line no-shadow
 const Sandbox = forwardRef( function Sandbox(
 	{
 		containerStyle,
