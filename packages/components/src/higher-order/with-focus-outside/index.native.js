@@ -12,6 +12,7 @@ import {
 } from '@wordpress/compose';
 
 export default createHigherOrderComponent(
+	// eslint-disable-next-line react/display-name
 	( WrappedComponent ) => ( props ) => {
 		const [ handleFocusOutside, setHandleFocusOutside ] = useState();
 		const bindFocusOutsideHandler = useCallback(

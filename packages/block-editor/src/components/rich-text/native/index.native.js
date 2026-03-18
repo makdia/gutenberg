@@ -1342,6 +1342,7 @@ RichText.defaultProps = {
 	tagName: 'div',
 };
 
+// eslint-disable-next-line react/display-name
 const withFormatTypes = ( WrappedComponent ) => ( props ) => {
 	const {
 		clientId,

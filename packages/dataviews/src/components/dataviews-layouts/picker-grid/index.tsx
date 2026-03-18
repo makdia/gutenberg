@@ -83,6 +83,7 @@ function GridItem< Item >( {
 	const isSelected = selection.includes( id );
 
 	const setElementRef = ( element: HTMLElement | null ) => {
+		// eslint-disable-next-line react-compiler/react-compiler -- false positive, see https://github.com/facebook/react/issues/29196
 		elementRef.current = element;
 	};
 
