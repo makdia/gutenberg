@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Enhancements
+
+-   Set `modalSize: 'small'` on `duplicateTemplatePart` and `duplicatePattern` actions to replace CSS-based width overrides.
+
 ## 0.34.0 (2026-03-18)
 
 ## 0.33.0 (2026-03-04)
