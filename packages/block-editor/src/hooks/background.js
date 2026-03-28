@@ -3,7 +3,7 @@
  */
 import { getBlockSupport } from '@wordpress/blocks';
 import { useSelect } from '@wordpress/data';
-import { useCallback } from '@wordpress/element';
+import { useCallback, useMemo } from '@wordpress/element';
 
 /**
  * Internal dependencies
@@ -110,16 +110,32 @@ export function getBackgroundImageClasses( style ) {
 	return hasBackgroundImageValue( style ) ? 'has-background' : '';
 }
 
-function BackgroundInspectorControl( { children } ) {
-	const resetAllFilter = useCallback( ( attributes ) => {
-		return {
-			...attributes,
-			style: {
-				...attributes.style,
-				background: undefined,
-			},
-		};
-	}, [] );
+function BackgroundInspectorControl( { children, selectedState = 'default' } ) {
+	const isStateSelected = selectedState !== 'default';
+	const resetAllFilter = useCallback(
+		( attributes ) => {
+			if ( isStateSelected ) {
+				return {
+					...attributes,
+					style: cleanEmptyObject( {
+						...attributes.style,
+						[ selectedState ]: {
+							...attributes.style?.[ selectedState ],
+							background: undefined,
+						},
+					} ),
+				};
+			}
+			return {
+				...attributes,
+				style: {
+					...attributes.style,
+					background: undefined,
+				},
+			};
+		},
+		[ isStateSelected, selectedState ]
+	);
 	return (
 		<InspectorControls group="background" resetAllFilter={ resetAllFilter }>
 			{ children }
@@ -155,6 +171,19 @@ export function BackgroundImagePanel( {
 		[ clientId, name ]
 	);
 
+	const BackgroundWrapper = useMemo(
+		() =>
+			function BackgroundWrapperComponent( props ) {
+				return (
+					<BackgroundInspectorControl
+						{ ...props }
+						selectedState={ selectedState }
+					/>
+				);
+			},
+		[ selectedState ]
+	);
+
 	if (
 		! useHasBackgroundPanel( settings ) ||
 		! hasBackgroundSupport( name, 'backgroundImage' )
@@ -162,9 +191,9 @@ export function BackgroundImagePanel( {
 		return null;
 	}
 
-	const isStateMode = selectedState && selectedState !== 'default';
-	const value = isStateMode ? style?.[ selectedState ] : style;
-	const onChange = isStateMode
+	const isStateSelected = selectedState && selectedState !== 'default';
+	const value = isStateSelected ? style?.[ selectedState ] : style;
+	const onChange = isStateSelected
 		? ( newStateStyle ) =>
 				setAttributes( {
 					style: cleanEmptyObject( {
@@ -195,7 +224,7 @@ export function BackgroundImagePanel( {
 	return (
 		<StylesBackgroundPanel
 			inheritedValue={ inheritedValue }
-			as={ BackgroundInspectorControl }
+			as={ BackgroundWrapper }
 			panelId={ clientId }
 			defaultValues={ BACKGROUND_BLOCK_DEFAULT_VALUES }
 			settings={ updatedSettings }
