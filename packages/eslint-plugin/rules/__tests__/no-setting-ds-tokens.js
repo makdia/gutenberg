@@ -44,7 +44,7 @@ ruleTester.run( 'no-setting-ds-tokens', rule, {
 			],
 		},
 		{
-			code: `<div style={ { '--wpds-font-size-md': '10px', color: 'blue' } } />`,
+			code: `<div style={ { '--wpds-typography-font-size-md': '10px', color: 'blue' } } />`,
 			errors: [
 				{
 					messageId: 'disallowedSet',
@@ -60,7 +60,7 @@ ruleTester.run( 'no-setting-ds-tokens', rule, {
 			],
 		},
 		{
-			code: `function getStyles() { return { '--wpds-font-size-md': '10px' }; }`,
+			code: `function getStyles() { return { '--wpds-typography-font-size-md': '10px' }; }`,
 			errors: [
 				{
 					messageId: 'disallowedSet',
