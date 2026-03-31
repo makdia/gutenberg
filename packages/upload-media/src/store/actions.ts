@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from 'uuid';
  * WordPress dependencies
  */
 import type { createRegistry } from '@wordpress/data';
-import warning from '@wordpress/warning';
 
 type WPDataRegistry = ReturnType< typeof createRegistry >;
 
@@ -25,14 +24,20 @@ import type {
 	RetryItemAction,
 	State,
 } from './types';
-import { Type } from './types';
+import { OperationType, Type } from './types';
 import type {
 	addItem,
 	processItem,
 	removeItem,
 	revokeBlobUrls,
 } from './private-actions';
+import {
+	MAX_RETRIES,
+	BASE_RETRY_DELAY_MS,
+	MAX_RETRY_DELAY_MS,
+} from './constants';
 import { vipsCancelOperations } from './utils';
+import { UploadError } from '../upload-error';
 import { validateMimeType } from '../validate-mime-type';
 import { validateMimeTypeForUser } from '../validate-mime-type-for-user';
 import { validateFileSize } from '../validate-file-size';
@@ -139,6 +144,10 @@ export function addItems( {
 /**
  * Cancels an item in the queue based on an error.
  *
+ * For retryable errors (network failures, server errors, etc.), the item
+ * is automatically retried with exponential backoff up to MAX_RETRIES times
+ * before permanently failing.
+ *
  * @param id     Item ID.
  * @param error  Error instance.
  * @param silent Whether to cancel the item silently,
@@ -159,6 +168,41 @@ export function cancelItem( id: QueueItemId, error: Error, silent = false ) {
 			return;
 		}
 
+		// Auto-retry retryable errors with exponential backoff.
+		const retryCount = item.retryCount ?? 0;
+		if (
+			error instanceof UploadError &&
+			error.isRetryable &&
+			retryCount < MAX_RETRIES
+		) {
+			const delay = Math.min(
+				BASE_RETRY_DELAY_MS * Math.pow( 2, retryCount ),
+				MAX_RETRY_DELAY_MS
+			);
+
+			// Mark as retrying (increments retryCount, clears error).
+			dispatch< RetryItemAction >( {
+				type: Type.RetryItem,
+				id,
+			} );
+
+			// Reset operations to re-prepare the item from scratch,
+			// since the operation list is consumed as operations complete.
+			dispatch( {
+				type: Type.OperationFinish,
+				id,
+				item: {
+					operations: [ OperationType.Prepare ],
+					currentOperation: undefined,
+				},
+			} );
+
+			// Wait with exponential backoff, then re-process.
+			await new Promise( ( resolve ) => setTimeout( resolve, delay ) );
+			dispatch.processItem( id );
+			return;
+		}
+
 		item.abortController?.abort();
 
 		// Cancel any ongoing vips operations for this item.
@@ -168,18 +212,9 @@ export function cancelItem( id: QueueItemId, error: Error, silent = false ) {
 			const { onError } = item;
 			onError?.( error ?? new Error( 'Upload cancelled' ) );
 			if ( ! onError && error ) {
-				warning(
-					`Upload cancelled for item ${ id }: ${ error.message }`
-				);
 				// eslint-disable-next-line no-console -- Deliberately log errors here.
 				console.error( 'Upload cancelled', error );
 			}
-		} else {
-			warning(
-				`Item cancelled: ${ item.file.name } (item ${ id }): ${
-					error instanceof Error ? error.message : error
-				}`
-			);
 		}
 
 		dispatch< CancelAction >( {
@@ -192,7 +227,6 @@ export function cancelItem( id: QueueItemId, error: Error, silent = false ) {
 
 		// All items of this batch were cancelled or finished.
 		if ( item.batchId && select.isBatchUploaded( item.batchId ) ) {
-			warning( `Batch completed: ${ item.batchId }` );
 			item.onBatchSuccess?.();
 		}
 	};
@@ -200,6 +234,9 @@ export function cancelItem( id: QueueItemId, error: Error, silent = false ) {
 
 /**
  * Retries a failed item in the queue.
+ *
+ * Resets the item's operations to re-prepare from scratch,
+ * since the operation list is consumed as operations complete.
  *
  * @param id Item ID.
  */
@@ -219,6 +256,16 @@ export function retryItem( id: QueueItemId ) {
 		dispatch< RetryItemAction >( {
 			type: Type.RetryItem,
 			id,
+		} );
+
+		// Reset operations to re-prepare the item from scratch.
+		dispatch( {
+			type: Type.OperationFinish,
+			id,
+			item: {
+				operations: [ OperationType.Prepare ],
+				currentOperation: undefined,
+			},
 		} );
 
 		dispatch.processItem( id );

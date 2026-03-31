@@ -28,3 +28,19 @@ export const CLIENT_SIDE_SUPPORTED_MIME_TYPES: readonly string[] = [
 	'image/webp',
 	'image/avif',
 ] as const;
+
+/**
+ * Maximum number of automatic retry attempts for retryable errors.
+ */
+export const MAX_RETRIES = 3;
+
+/**
+ * Base delay in milliseconds for exponential backoff between retries.
+ * Actual delay = BASE_RETRY_DELAY_MS * 2^(retryCount - 1), capped at MAX_RETRY_DELAY_MS.
+ */
+export const BASE_RETRY_DELAY_MS = 1000;
+
+/**
+ * Maximum delay in milliseconds between retries.
+ */
+export const MAX_RETRY_DELAY_MS = 10000;

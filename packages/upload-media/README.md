@@ -61,6 +61,8 @@ _Parameters_
 
 Cancels an item in the queue based on an error.
 
+For retryable errors (network failures, server errors, etc.), the item is automatically retried with exponential backoff up to MAX_RETRIES times before permanently failing.
+
 _Parameters_
 
 -   _id_ `QueueItemId`: Item ID.
@@ -70,6 +72,8 @@ _Parameters_
 #### retryItem
 
 Retries a failed item in the queue.
+
+Resets the item's operations to re-prepare from scratch, since the operation list is consumed as operations complete.
 
 _Parameters_
 

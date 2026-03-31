@@ -10,6 +10,7 @@ type WPDataRegistry = ReturnType< typeof createRegistry >;
 import { store as uploadStore } from '..';
 import { ItemStatus, OperationType } from '../types';
 import { unlock } from '../../lock-unlock';
+import { UploadError, ErrorCode } from '../../upload-error';
 
 jest.mock( '@wordpress/blob', () => ( {
 	__esModule: true,
@@ -360,7 +361,6 @@ describe( 'actions', () => {
 
 			expect( vipsCancelOperations ).toHaveBeenCalledWith( item.id );
 			expect( consoleErrorSpy ).toHaveBeenCalled();
-			expect( console ).toHaveWarned();
 
 			consoleErrorSpy.mockRestore();
 		} );
@@ -385,7 +385,6 @@ describe( 'actions', () => {
 			expect(
 				unlock( registry.select( uploadStore ) ).getAllItems()
 			).toHaveLength( 0 );
-			expect( console ).toHaveWarned();
 
 			consoleErrorSpy.mockRestore();
 		} );
@@ -424,7 +423,118 @@ describe( 'actions', () => {
 				.cancelItem( item.id, new Error( 'Test error' ), true );
 
 			expect( onError ).not.toHaveBeenCalled();
-			expect( console ).toHaveWarned();
+		} );
+
+		it( 'auto-retries retryable errors instead of cancelling', async () => {
+			jest.useFakeTimers();
+
+			unlock( registry.dispatch( uploadStore ) ).addItem( {
+				file: jpegFile,
+			} );
+			const item = unlock(
+				registry.select( uploadStore )
+			).getAllItems()[ 0 ];
+
+			const retryableError = new UploadError( {
+				code: ErrorCode.NETWORK_ERROR,
+				message: 'Network failure',
+				file: jpegFile,
+			} );
+
+			// Start cancellation (which triggers auto-retry).
+			const cancelPromise = registry
+				.dispatch( uploadStore )
+				.cancelItem( item.id, retryableError );
+
+			// Advance past the backoff delay.
+			jest.advanceTimersByTime( 2000 );
+			await cancelPromise;
+
+			// Item should still be in the queue (retried, not removed).
+			const items = unlock(
+				registry.select( uploadStore )
+			).getAllItems();
+			expect( items ).toHaveLength( 1 );
+			expect( items[ 0 ].retryCount ).toBe( 1 );
+			expect( items[ 0 ].error ).toBeUndefined();
+
+			jest.useRealTimers();
+		} );
+
+		it( 'does not auto-retry non-retryable errors', async () => {
+			const consoleErrorSpy = jest
+				.spyOn( console, 'error' )
+				.mockImplementation( () => {} );
+
+			unlock( registry.dispatch( uploadStore ) ).addItem( {
+				file: jpegFile,
+			} );
+			const item = unlock(
+				registry.select( uploadStore )
+			).getAllItems()[ 0 ];
+
+			const nonRetryableError = new UploadError( {
+				code: ErrorCode.PERMISSION_DENIED,
+				message: 'Forbidden',
+				file: jpegFile,
+			} );
+
+			await registry
+				.dispatch( uploadStore )
+				.cancelItem( item.id, nonRetryableError );
+
+			// Item should be removed (not retried).
+			expect(
+				unlock( registry.select( uploadStore ) ).getAllItems()
+			).toHaveLength( 0 );
+
+			consoleErrorSpy.mockRestore();
+		} );
+
+		it( 'stops retrying after MAX_RETRIES attempts', async () => {
+			jest.useFakeTimers();
+			const onError = jest.fn();
+
+			unlock( registry.dispatch( uploadStore ) ).addItem( {
+				file: jpegFile,
+				onError,
+			} );
+
+			const retryableError = new UploadError( {
+				code: ErrorCode.NETWORK_ERROR,
+				message: 'Network failure',
+				file: jpegFile,
+			} );
+
+			// Retry 3 times (MAX_RETRIES = 3).
+			for ( let i = 0; i < 3; i++ ) {
+				const item = unlock(
+					registry.select( uploadStore )
+				).getAllItems()[ 0 ];
+				const cancelPromise = registry
+					.dispatch( uploadStore )
+					.cancelItem( item.id, retryableError );
+				jest.advanceTimersByTime( 20000 );
+				await cancelPromise;
+			}
+
+			// 4th attempt should fail permanently.
+			const item = unlock(
+				registry.select( uploadStore )
+			).getAllItems()[ 0 ];
+			expect( item.retryCount ).toBe( 3 );
+
+			await registry
+				.dispatch( uploadStore )
+				.cancelItem( item.id, retryableError );
+
+			// Item should now be removed.
+			expect(
+				unlock( registry.select( uploadStore ) ).getAllItems()
+			).toHaveLength( 0 );
+			expect( onError ).toHaveBeenCalledWith( retryableError );
+
+			jest.useRealTimers();
 		} );
 	} );
 
