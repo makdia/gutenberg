@@ -72,44 +72,58 @@ export default function DataFormPostSummary( { onActionPerformed } ) {
 
 	const { editEntityRecord } = useDispatch( coreDataStore );
 
-	const _fields = usePostFields( { postType } );
-	const fields = useMemo(
-		() =>
-			_fields
-				?.map( ( field ) => {
-					if ( field.id === 'status' ) {
+	const postFields = usePostFields( { postType } );
+	const isCustomRecord =
+		record?.source === 'custom' &&
+		! record?.has_theme_file &&
+		record?.is_custom;
+	const fields = useMemo( () => {
+		return postFields
+			?.map( ( field ) => {
+				if ( field.id === 'status' ) {
+					return {
+						...field,
+						elements: field.elements.filter(
+							( element ) => element.value !== 'trash'
+						),
+					};
+				}
+				if ( field.id === 'template' ) {
+					// `usePostTemplatePanelMode` is reused in the Post Template panel to match
+					// the existing behavior. If the panel rendered nothing we should exclude the
+					// template field from the form.
+					if ( ! templatePanelMode ) {
+						return null;
+					}
+					// In classic themes without available templates we need to make the field read-only.
+					if (
+						templatePanelMode === 'classic' &&
+						Object.keys( availableTemplates ?? {} ).length === 0
+					) {
 						return {
 							...field,
-							elements: field.elements.filter(
-								( element ) => element.value !== 'trash'
-							),
+							readOnly: true,
+							render: () => __( 'Default template' ),
 						};
 					}
-					if ( field.id === 'template' ) {
-						// `usePostTemplatePanelMode` is reused in the Post Template panel to match
-						// the existing behavior. If the panel rendered nothing we should exclude the
-						// template field from the form.
-						if ( ! templatePanelMode ) {
-							return null;
-						}
-						// In classic themes without available templates we need to make the field read-only.
-						if (
-							templatePanelMode === 'classic' &&
-							Object.keys( availableTemplates ?? {} ).length === 0
-						) {
-							return {
-								...field,
-								readOnly: true,
-								render: () => __( 'Default template' ),
-							};
-						}
-						return field;
-					}
 					return field;
-				} )
-				.filter( Boolean ),
-		[ _fields, templatePanelMode, availableTemplates ]
-	);
+				}
+				if ( field.id === 'description' ) {
+					// TODO: handle only for templates now..
+					if ( postType === 'wp_template' && ! isCustomRecord ) {
+						return { ...field, readOnly: true };
+					}
+				}
+				return field;
+			} )
+			.filter( Boolean );
+	}, [
+		postFields,
+		isCustomRecord,
+		postType,
+		templatePanelMode,
+		availableTemplates,
+	] );
 
 	const onChange = ( edits ) => {
 		if (
