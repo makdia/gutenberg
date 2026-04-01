@@ -37,6 +37,7 @@ const VALID_SETTINGS = [
 	'dimensions.aspectRatio',
 	'dimensions.height',
 	'dimensions.minHeight',
+	'dimensions.minWidth',
 	'dimensions.width',
 	'dimensions.dimensionSizes',
 	'layout.contentSize',
