@@ -132,6 +132,7 @@ class Gutenberg_REST_View_Config_Controller_7_1 extends WP_REST_Controller {
 			$default_view    = $this->get_default_view_for_wp_template();
 			$default_layouts = $this->get_default_layouts_for_wp_template();
 			$view_list       = $this->get_view_list_for_wp_template();
+			$form			 = $this->get_form_for_template();
 		}
 
 		$response = array(
@@ -820,6 +821,21 @@ class Gutenberg_REST_View_Config_Controller_7_1 extends WP_REST_Controller {
 				),
 				'parent',
 				'format',
+			),
+		);
+	}
+
+	private function get_form_for_template() {
+		return array(
+			'layout' => array( 'type' => 'panel' ),
+			'fields' => array(
+				array(
+					'id'     => 'description',
+					'layout' => array(
+						'type'          => 'regular',
+						'labelPosition' => 'top',
+					),
+				),
 			),
 		);
 	}
