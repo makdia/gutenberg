@@ -270,7 +270,8 @@ export const registerPostTypeSchema =
 					dateField,
 				! DESIGN_POST_TYPES.includes( postTypeConfig.slug ) &&
 					scheduledDateField,
-				slugField,
+				! DESIGN_POST_TYPES.includes( postTypeConfig.slug ) &&
+					slugField,
 				! DESIGN_POST_TYPES.includes( postTypeConfig.slug ) &&
 					postTypeConfig.supports?.excerpt &&
 					excerptField,
@@ -282,14 +283,16 @@ export const registerPostTypeSchema =
 				( postTypeConfig.supports?.comments ||
 					postTypeConfig.supports?.trackbacks ) &&
 					discussionField,
-				templateField,
+				! DESIGN_POST_TYPES.includes( postTypeConfig.slug ) &&
+					templateField,
 				postTypeConfig.supports?.[ 'post-formats' ] &&
 					! disablePostFormats &&
 					formatField,
 				! DESIGN_POST_TYPES.includes( postTypeConfig.slug ) &&
 					postTypeConfig.supports?.editor &&
 					postContentInfoField,
-				passwordField,
+				! DESIGN_POST_TYPES.includes( postTypeConfig.slug ) &&
+					passwordField,
 				postTypeConfig.slug === 'post' && stickyField,
 				postTypeConfig.supports?.editor &&
 					postTypeConfig.viewable &&
