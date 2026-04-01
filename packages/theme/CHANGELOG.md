@@ -10,6 +10,8 @@
     -   `--wpds-font-weight-*`: use `--wpds-typography-font-weight-*` instead.
     -   `--wpds-font-line-height-*`: use `--wpds-typography-line-height-*` instead.
 
+## 0.10.0 (2026-04-01)
+
 ### Enhancements
 
 -   Change the default value of `--wpds-cursor-control` from `default` to `pointer` ([#76762](https://github.com/WordPress/gutenberg/pull/76762)).
