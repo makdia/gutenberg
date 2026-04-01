@@ -832,7 +832,7 @@ class Gutenberg_REST_View_Config_Controller_7_1 extends WP_REST_Controller {
 				array(
 					'id'     => 'description',
 					'layout' => array(
-						'type'          => 'regular',
+						'type'          => 'panel',
 						'labelPosition' => 'top',
 					),
 				),

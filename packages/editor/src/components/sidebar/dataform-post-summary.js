@@ -33,7 +33,6 @@ export default function DataFormPostSummary( { onActionPerformed } ) {
 		kind: 'postType',
 		name: postType,
 	} );
-	const form = formConfig ?? EMPTY_FORM;
 	const record = useSelect(
 		( select ) => {
 			if ( ! postType || ! postId ) {
@@ -77,6 +76,29 @@ export default function DataFormPostSummary( { onActionPerformed } ) {
 		record?.source === 'custom' &&
 		! record?.has_theme_file &&
 		record?.is_custom;
+	const form = useMemo( () => {
+		const baseForm = formConfig ?? EMPTY_FORM;
+		// TODO: We need to get design input for whether to show the label
+		// in all cases or not.
+		if ( postType !== 'wp_template' || isCustomRecord ) {
+			return baseForm;
+		}
+		return {
+			...baseForm,
+			fields: baseForm.fields?.map( ( field ) => {
+				if ( field.id === 'description' ) {
+					return {
+						...field,
+						layout: {
+							...field.layout,
+							labelPosition: 'none',
+						},
+					};
+				}
+				return field;
+			} ),
+		};
+	}, [ formConfig, postType, isCustomRecord ] );
 	const fields = useMemo( () => {
 		return postFields
 			?.map( ( field ) => {
