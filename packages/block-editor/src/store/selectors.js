@@ -1980,9 +1980,9 @@ export function canRemoveBlock( state, clientId ) {
 			if ( defaultBlocks.length > 1 ) {
 				return true;
 			}
-		} else {
 			return false;
 		}
+		return false;
 	}
 
 	return rootBlockEditingMode !== 'disabled';
