@@ -14,5 +14,6 @@ const warning = (
 	</Warning>
 );
 
-// eslint-disable-next-line react/display-name
-export default () => warning;
+export default function BlockCrashWarning() {
+	return warning;
+}

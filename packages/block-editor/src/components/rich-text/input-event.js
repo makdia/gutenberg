@@ -8,14 +8,11 @@ import { useEffect, useContext, useRef } from '@wordpress/element';
  */
 import { inputEventContext } from './';
 
-export function __unstableRichTextInputEvent( { inputType, onInput } ) {
-	// eslint-disable-next-line react-hooks/rules-of-hooks
+export function RichTextInputEvent( { inputType, onInput } ) {
 	const callbacks = useContext( inputEventContext );
-	// eslint-disable-next-line react-hooks/rules-of-hooks
 	const onInputRef = useRef();
 	onInputRef.current = onInput;
 
-	// eslint-disable-next-line react-hooks/rules-of-hooks
 	useEffect( () => {
 		function callback( event ) {
 			if ( event.inputType === inputType ) {
