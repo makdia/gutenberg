@@ -847,6 +847,7 @@ class Gutenberg_REST_View_Config_Controller_7_1 extends WP_REST_Controller {
 			'layout' => array( 'type' => 'panel' ),
 			'fields' => array(
 				'posts_per_page',
+				'default_comment_status',
 			),
 		);
 	}
