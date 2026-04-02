@@ -119,10 +119,22 @@ function ParagraphBlock( {
 		style: { direction },
 	} );
 	const blockEditingMode = useBlockEditingMode();
+	const isDefaultEditingMode = blockEditingMode === 'default';
+
+	let ariaLabel;
+	if ( ! RichText.isEmpty( content ) ) {
+		ariaLabel = __( 'Block: Paragraph' );
+	} else if ( isDefaultEditingMode ) {
+		ariaLabel = __(
+			'Empty block; start writing or type forward slash to choose a block'
+		);
+	} else {
+		ariaLabel = __( 'Empty block; start writing' );
+	}
 
 	return (
 		<>
-			{ blockEditingMode === 'default' && (
+			{ isDefaultEditingMode && (
 				<BlockControls group="block">
 					<ParagraphRTLControl
 						direction={ direction }
@@ -151,15 +163,14 @@ function ParagraphBlock( {
 				onMerge={ mergeBlocks }
 				onReplace={ onReplace }
 				onRemove={ onRemove }
-				aria-label={
-					RichText.isEmpty( content )
-						? __(
-								'Empty block; start writing or type forward slash to choose a block'
-						  )
-						: __( 'Block: Paragraph' )
-				}
+				aria-label={ ariaLabel }
 				data-empty={ RichText.isEmpty( content ) }
-				placeholder={ placeholder || __( 'Type / to choose a block' ) }
+				placeholder={
+					placeholder ||
+					( isDefaultEditingMode
+						? __( 'Type / to choose a block' )
+						: __( 'Type to write…' ) )
+				}
 				data-custom-placeholder={ placeholder ? true : undefined }
 				__unstableEmbedURLOnPaste
 				__unstableAllowPrefixTransformations
