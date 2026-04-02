@@ -122,17 +122,6 @@ function ParagraphBlock( {
 	const isDefaultEditingMode = blockEditingMode === 'default';
 	const isContentEmpty = RichText.isEmpty( content );
 
-	let ariaLabel;
-	if ( ! isContentEmpty ) {
-		ariaLabel = __( 'Block: Paragraph' );
-	} else if ( isDefaultEditingMode ) {
-		ariaLabel = __(
-			'Empty block; start writing or type forward slash to choose a block'
-		);
-	} else {
-		ariaLabel = __( 'Empty block; start writing' );
-	}
-
 	return (
 		<>
 			{ isDefaultEditingMode && (
@@ -164,7 +153,13 @@ function ParagraphBlock( {
 				onMerge={ mergeBlocks }
 				onReplace={ onReplace }
 				onRemove={ onRemove }
-				aria-label={ ariaLabel }
+				aria-label={
+					isContentEmpty && isDefaultEditingMode
+						? __(
+								'Empty block; start writing or type forward slash to choose a block'
+						  )
+						: __( 'Block: Paragraph' )
+				}
 				data-empty={ isContentEmpty }
 				placeholder={
 					placeholder ||
