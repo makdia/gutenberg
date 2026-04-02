@@ -165,7 +165,7 @@ function ParagraphBlock( {
 					placeholder ||
 					( isDefaultEditingMode
 						? __( 'Type / to choose a block' )
-						: __( 'Type to write…' ) )
+						: __( 'Start writing…' ) )
 				}
 				data-custom-placeholder={ placeholder ? true : undefined }
 				__unstableEmbedURLOnPaste
