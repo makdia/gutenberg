@@ -1,8 +1,19 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, useState } from '@wordpress/element';
+import { createRef } from '@wordpress/element';
 
 import * as AlertDialog from '..';
+import type { ConfirmResult } from '../types';
+
+function createDeferred() {
+	let resolve!: ( value?: ConfirmResult ) => void;
+	let reject!: ( reason?: unknown ) => void;
+	const promise = new Promise< ConfirmResult >( ( res, rej ) => {
+		resolve = res;
+		reject = rej;
+	} );
+	return { promise, resolve, reject };
+}
 
 describe( 'AlertDialog', () => {
 	it( 'forwards ref', () => {
@@ -14,12 +25,8 @@ describe( 'AlertDialog', () => {
 				<AlertDialog.Trigger ref={ triggerRef }>
 					Open
 				</AlertDialog.Trigger>
-				<AlertDialog.Popup
-					ref={ popupRef }
-					title="Test Title"
-					onConfirm={ jest.fn() }
-				>
-					Test message content
+				<AlertDialog.Popup ref={ popupRef } title="Test Title">
+					Content
 				</AlertDialog.Popup>
 			</AlertDialog.Root>
 		);
@@ -28,10 +35,10 @@ describe( 'AlertDialog', () => {
 		expect( popupRef.current ).toBeInstanceOf( HTMLDivElement );
 	} );
 
-	it( 'renders with title, message, and default buttons', async () => {
+	it( 'renders with title, children, and default buttons', async () => {
 		render(
 			<AlertDialog.Root open onOpenChange={ jest.fn() }>
-				<AlertDialog.Popup title="Test Title" onConfirm={ jest.fn() }>
+				<AlertDialog.Popup title="Test Title">
 					Test message content
 				</AlertDialog.Popup>
 			</AlertDialog.Root>
@@ -51,13 +58,27 @@ describe( 'AlertDialog', () => {
 		).toBeVisible();
 	} );
 
-	it( 'renders with role="alertdialog" for default intent', async () => {
+	it( 'renders description when provided', async () => {
 		render(
 			<AlertDialog.Root open onOpenChange={ jest.fn() }>
 				<AlertDialog.Popup
-					title="Default Dialog"
-					onConfirm={ jest.fn() }
+					title="Test Title"
+					description="This is a description"
 				>
+					Body content
+				</AlertDialog.Popup>
+			</AlertDialog.Root>
+		);
+
+		await waitFor( () => {
+			expect( screen.getByText( 'This is a description' ) ).toBeVisible();
+		} );
+	} );
+
+	it( 'renders with role="alertdialog" for default intent', async () => {
+		render(
+			<AlertDialog.Root open onOpenChange={ jest.fn() }>
+				<AlertDialog.Popup title="Default Dialog">
 					Content
 				</AlertDialog.Popup>
 			</AlertDialog.Root>
@@ -70,14 +91,10 @@ describe( 'AlertDialog', () => {
 
 	it( 'renders with role="alertdialog" for irreversible intent', async () => {
 		render(
-			<AlertDialog.Root
-				intent="irreversible"
-				open
-				onOpenChange={ jest.fn() }
-			>
+			<AlertDialog.Root open onOpenChange={ jest.fn() }>
 				<AlertDialog.Popup
+					intent="irreversible"
 					title="Irreversible Dialog"
-					onConfirm={ jest.fn() }
 				>
 					Content
 				</AlertDialog.Popup>
@@ -89,343 +106,15 @@ describe( 'AlertDialog', () => {
 		} );
 	} );
 
-	it( 'calls onConfirm and onOpenChange when confirm button is clicked', async () => {
-		const onConfirm = jest.fn();
-		const onOpenChange = jest.fn();
-
-		render(
-			<AlertDialog.Root open onOpenChange={ onOpenChange }>
-				<AlertDialog.Popup
-					title="Confirm Action"
-					onConfirm={ onConfirm }
-				>
-					Are you sure?
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect(
-				screen.getByRole( 'button', { name: 'OK' } )
-			).toBeVisible();
-		} );
-
-		await userEvent.click( screen.getByRole( 'button', { name: 'OK' } ) );
-
-		expect( onConfirm ).toHaveBeenCalledTimes( 1 );
-		expect( onOpenChange ).toHaveBeenCalledWith(
-			false,
-			expect.objectContaining( { reason: 'close-press' } )
-		);
-	} );
-
-	it( 'calls onOpenChange when cancel button is clicked', async () => {
-		const onConfirm = jest.fn();
-		const onOpenChange = jest.fn();
-
-		render(
-			<AlertDialog.Root open onOpenChange={ onOpenChange }>
-				<AlertDialog.Popup
-					title="Confirm Action"
-					onConfirm={ onConfirm }
-				>
-					Are you sure?
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect(
-				screen.getByRole( 'button', { name: 'Cancel' } )
-			).toBeVisible();
-		} );
-
-		await userEvent.click(
-			screen.getByRole( 'button', { name: 'Cancel' } )
-		);
-
-		expect( onOpenChange ).toHaveBeenCalledWith(
-			false,
-			expect.objectContaining( { reason: 'close-press' } )
-		);
-		expect( onConfirm ).not.toHaveBeenCalled();
-	} );
-
-	it( 'calls onOpenChange on escape key for default intent', async () => {
-		const onOpenChange = jest.fn();
-
-		render(
-			<AlertDialog.Root open onOpenChange={ onOpenChange }>
-				<AlertDialog.Popup
-					title="Default Dialog"
-					onConfirm={ jest.fn() }
-				>
-					Content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect( screen.getByText( 'Default Dialog' ) ).toBeVisible();
-		} );
-
-		await userEvent.keyboard( '{Escape}' );
-
-		expect( onOpenChange ).toHaveBeenCalledWith(
-			false,
-			expect.objectContaining( { reason: 'escape-key' } )
-		);
-	} );
-
-	it( 'does not call onOpenChange on backdrop click for default intent', async () => {
-		const onOpenChange = jest.fn();
-
-		render(
-			<AlertDialog.Root open onOpenChange={ onOpenChange }>
-				<AlertDialog.Popup
-					title="Default Dialog"
-					onConfirm={ jest.fn() }
-				>
-					Content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect( screen.getByText( 'Default Dialog' ) ).toBeVisible();
-		} );
-
-		await userEvent.click( document.body );
-
-		expect( onOpenChange ).not.toHaveBeenCalled();
-	} );
-
-	it( 'renders with title, message, and default buttons for irreversible intent', async () => {
-		render(
-			<AlertDialog.Root
-				intent="irreversible"
-				open
-				onOpenChange={ jest.fn() }
-			>
-				<AlertDialog.Popup
-					title="Irreversible Dialog"
-					onConfirm={ jest.fn() }
-				>
-					Irreversible message content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect( screen.getByText( 'Irreversible Dialog' ) ).toBeVisible();
-		} );
-
-		expect(
-			screen.getByText( 'Irreversible message content' )
-		).toBeVisible();
-		expect(
-			screen.queryByRole( 'button', { name: 'Close' } )
-		).not.toBeInTheDocument();
-		expect( screen.getByRole( 'button', { name: 'OK' } ) ).toBeVisible();
-		expect(
-			screen.getByRole( 'button', { name: 'Cancel' } )
-		).toBeVisible();
-	} );
-
-	it( 'calls onOpenChange on escape key for irreversible intent', async () => {
-		const onOpenChange = jest.fn();
-
-		render(
-			<AlertDialog.Root
-				intent="irreversible"
-				open
-				onOpenChange={ onOpenChange }
-			>
-				<AlertDialog.Popup
-					title="Irreversible Dialog"
-					onConfirm={ jest.fn() }
-				>
-					Content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect( screen.getByText( 'Irreversible Dialog' ) ).toBeVisible();
-		} );
-
-		await userEvent.keyboard( '{Escape}' );
-
-		expect( onOpenChange ).toHaveBeenCalledWith(
-			false,
-			expect.objectContaining( { reason: 'escape-key' } )
-		);
-	} );
-
-	it( 'does not call onOpenChange on backdrop click for irreversible intent', async () => {
-		const onOpenChange = jest.fn();
-
-		render(
-			<AlertDialog.Root
-				intent="irreversible"
-				open
-				onOpenChange={ onOpenChange }
-			>
-				<AlertDialog.Popup
-					title="Irreversible Dialog"
-					onConfirm={ jest.fn() }
-				>
-					Content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect( screen.getByText( 'Irreversible Dialog' ) ).toBeVisible();
-		} );
-
-		await userEvent.click( document.body );
-
-		expect( onOpenChange ).not.toHaveBeenCalled();
-	} );
-
-	it( 'calls onOpenChange on cancel button click for irreversible intent', async () => {
-		const onOpenChange = jest.fn();
-		const onConfirm = jest.fn();
-
-		render(
-			<AlertDialog.Root
-				intent="irreversible"
-				open
-				onOpenChange={ onOpenChange }
-			>
-				<AlertDialog.Popup
-					title="Irreversible Dialog"
-					onConfirm={ onConfirm }
-				>
-					Content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect(
-				screen.getByRole( 'button', { name: 'Cancel' } )
-			).toBeVisible();
-		} );
-
-		await userEvent.click(
-			screen.getByRole( 'button', { name: 'Cancel' } )
-		);
-
-		expect( onOpenChange ).toHaveBeenCalledWith(
-			false,
-			expect.objectContaining( { reason: 'close-press' } )
-		);
-		expect( onConfirm ).not.toHaveBeenCalled();
-	} );
-
-	it( 'calls onConfirm and onOpenChange on confirm button click for irreversible intent', async () => {
-		const onOpenChange = jest.fn();
-		const onConfirm = jest.fn();
-
-		render(
-			<AlertDialog.Root
-				intent="irreversible"
-				open
-				onOpenChange={ onOpenChange }
-			>
-				<AlertDialog.Popup
-					title="Irreversible Dialog"
-					onConfirm={ onConfirm }
-				>
-					Content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect(
-				screen.getByRole( 'button', { name: 'OK' } )
-			).toBeVisible();
-		} );
-
-		await userEvent.click( screen.getByRole( 'button', { name: 'OK' } ) );
-
-		expect( onConfirm ).toHaveBeenCalledTimes( 1 );
-		expect( onOpenChange ).toHaveBeenCalledWith(
-			false,
-			expect.objectContaining( { reason: 'close-press' } )
-		);
-	} );
-
-	it( 'disables both buttons when loading', async () => {
+	it( 'uses custom button labels', async () => {
 		render(
 			<AlertDialog.Root open onOpenChange={ jest.fn() }>
 				<AlertDialog.Popup
-					title="Loading Test"
-					onConfirm={ jest.fn() }
-					loading
-				>
-					Content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect(
-				screen.getByRole( 'button', { name: 'OK' } )
-			).toBeVisible();
-		} );
-
-		expect( screen.getByRole( 'button', { name: 'OK' } ) ).toHaveAttribute(
-			'aria-disabled',
-			'true'
-		);
-
-		expect(
-			screen.getByRole( 'button', { name: 'Cancel' } )
-		).toHaveAttribute( 'aria-disabled', 'true' );
-	} );
-
-	it( 'does not disable buttons when loading is false', async () => {
-		render(
-			<AlertDialog.Root open onOpenChange={ jest.fn() }>
-				<AlertDialog.Popup
-					title="No Loading"
-					onConfirm={ jest.fn() }
-					loading={ false }
-				>
-					Content
-				</AlertDialog.Popup>
-			</AlertDialog.Root>
-		);
-
-		await waitFor( () => {
-			expect(
-				screen.getByRole( 'button', { name: 'OK' } )
-			).toBeVisible();
-		} );
-
-		expect(
-			screen.getByRole( 'button', { name: 'OK' } )
-		).not.toHaveAttribute( 'aria-disabled', 'true' );
-
-		expect(
-			screen.getByRole( 'button', { name: 'Cancel' } )
-		).not.toHaveAttribute( 'aria-disabled', 'true' );
-	} );
-
-	it( 'uses custom button text when provided', async () => {
-		render(
-			<AlertDialog.Root open onOpenChange={ jest.fn() }>
-				<AlertDialog.Popup
-					title="Custom Text"
-					onConfirm={ jest.fn() }
+					title="Custom Labels"
 					confirmButtonText="Yes, do it"
 					cancelButtonText="No, go back"
 				>
-					Custom message
+					Content
 				</AlertDialog.Popup>
 			</AlertDialog.Root>
 		);
@@ -441,82 +130,11 @@ describe( 'AlertDialog', () => {
 		).toBeVisible();
 	} );
 
-	it( 'keeps dialog open when confirm is clicked with loading prop (async flow)', async () => {
-		function AsyncDialog() {
-			const [ isOpen, setIsOpen ] = useState( true );
-			const [ isLoading, setIsLoading ] = useState( false );
-
-			return (
-				<AlertDialog.Root
-					open={ isOpen }
-					onOpenChange={ ( open ) => {
-						if ( ! isLoading ) {
-							setIsOpen( open );
-						}
-					} }
-				>
-					<AlertDialog.Popup
-						title="Async Test"
-						loading={ isLoading }
-						onConfirm={ () => setIsLoading( true ) }
-					>
-						Content
-					</AlertDialog.Popup>
-				</AlertDialog.Root>
-			);
-		}
-
-		render( <AsyncDialog /> );
-
-		await waitFor( () => {
-			expect( screen.getByText( 'Async Test' ) ).toBeVisible();
-		} );
-
-		await userEvent.click( screen.getByRole( 'button', { name: 'OK' } ) );
-
-		expect( screen.getByText( 'Async Test' ) ).toBeVisible();
-		expect( screen.getByRole( 'button', { name: 'OK' } ) ).toHaveAttribute(
-			'aria-disabled',
-			'true'
-		);
-	} );
-
-	it( 'does not auto-close on confirm click when loading is false (manual-close mode)', async () => {
-		function ManualCloseDialog() {
-			const [ isOpen, setIsOpen ] = useState( true );
-
-			return (
-				<AlertDialog.Root
-					open={ isOpen }
-					onOpenChange={ ( open ) => setIsOpen( open ) }
-				>
-					<AlertDialog.Popup
-						title="Manual Close"
-						loading={ false }
-						onConfirm={ jest.fn() }
-					>
-						Content
-					</AlertDialog.Popup>
-				</AlertDialog.Root>
-			);
-		}
-
-		render( <ManualCloseDialog /> );
-
-		await waitFor( () => {
-			expect( screen.getByText( 'Manual Close' ) ).toBeVisible();
-		} );
-
-		await userEvent.click( screen.getByRole( 'button', { name: 'OK' } ) );
-
-		expect( screen.getByText( 'Manual Close' ) ).toBeVisible();
-	} );
-
 	it( 'opens dialog when Trigger is clicked', async () => {
 		render(
 			<AlertDialog.Root>
 				<AlertDialog.Trigger>Open</AlertDialog.Trigger>
-				<AlertDialog.Popup title="Trigger Test" onConfirm={ jest.fn() }>
+				<AlertDialog.Popup title="Trigger Test">
 					Dialog content
 				</AlertDialog.Popup>
 			</AlertDialog.Root>
@@ -533,5 +151,644 @@ describe( 'AlertDialog', () => {
 		} );
 
 		expect( screen.getByText( 'Dialog content' ) ).toBeVisible();
+	} );
+
+	describe( 'sync confirm flow', () => {
+		it( 'calls onConfirm and closes on confirm click', async () => {
+			const onConfirm = jest.fn();
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ onOpenChange }
+					onConfirm={ onConfirm }
+				>
+					<AlertDialog.Popup title="Sync Test">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			expect( onConfirm ).toHaveBeenCalledTimes( 1 );
+			await waitFor( () => {
+				expect( onOpenChange ).toHaveBeenCalledWith(
+					false,
+					expect.objectContaining( { reason: 'close-press' } )
+				);
+			} );
+		} );
+
+		it( 'closes without onConfirm when no handler is provided', async () => {
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root open onOpenChange={ onOpenChange }>
+					<AlertDialog.Popup title="No Handler">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await waitFor( () => {
+				expect( onOpenChange ).toHaveBeenCalledWith(
+					false,
+					expect.objectContaining( { reason: 'close-press' } )
+				);
+			} );
+		} );
+	} );
+
+	describe( 'cancel and dismiss', () => {
+		it( 'closes on cancel click without calling onConfirm', async () => {
+			const onConfirm = jest.fn();
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ onOpenChange }
+					onConfirm={ onConfirm }
+				>
+					<AlertDialog.Popup title="Cancel Test">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'Cancel' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'Cancel' } )
+			);
+
+			expect( onOpenChange ).toHaveBeenCalledWith(
+				false,
+				expect.objectContaining( { reason: 'close-press' } )
+			);
+			expect( onConfirm ).not.toHaveBeenCalled();
+		} );
+
+		it( 'closes on escape key', async () => {
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root open onOpenChange={ onOpenChange }>
+					<AlertDialog.Popup title="Escape Test">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Escape Test' ) ).toBeVisible();
+			} );
+
+			await userEvent.keyboard( '{Escape}' );
+
+			expect( onOpenChange ).toHaveBeenCalledWith(
+				false,
+				expect.objectContaining( { reason: 'escape-key' } )
+			);
+		} );
+
+		it( 'does not close on backdrop click', async () => {
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root open onOpenChange={ onOpenChange }>
+					<AlertDialog.Popup title="Backdrop Test">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Backdrop Test' ) ).toBeVisible();
+			} );
+
+			await userEvent.click( document.body );
+
+			expect( onOpenChange ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'irreversible intent', () => {
+		it( 'renders title and buttons', async () => {
+			render(
+				<AlertDialog.Root open onOpenChange={ jest.fn() }>
+					<AlertDialog.Popup
+						intent="irreversible"
+						title="Irreversible Dialog"
+					>
+						Irreversible message content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByText( 'Irreversible Dialog' )
+				).toBeVisible();
+			} );
+
+			expect(
+				screen.getByText( 'Irreversible message content' )
+			).toBeVisible();
+			expect(
+				screen.getByRole( 'button', { name: 'OK' } )
+			).toBeVisible();
+			expect(
+				screen.getByRole( 'button', { name: 'Cancel' } )
+			).toBeVisible();
+		} );
+
+		it( 'closes on escape key', async () => {
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root open onOpenChange={ onOpenChange }>
+					<AlertDialog.Popup
+						intent="irreversible"
+						title="Irreversible Dialog"
+					>
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByText( 'Irreversible Dialog' )
+				).toBeVisible();
+			} );
+
+			await userEvent.keyboard( '{Escape}' );
+
+			expect( onOpenChange ).toHaveBeenCalledWith(
+				false,
+				expect.objectContaining( { reason: 'escape-key' } )
+			);
+		} );
+
+		it( 'does not close on backdrop click', async () => {
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root open onOpenChange={ onOpenChange }>
+					<AlertDialog.Popup
+						intent="irreversible"
+						title="Irreversible Dialog"
+					>
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByText( 'Irreversible Dialog' )
+				).toBeVisible();
+			} );
+
+			await userEvent.click( document.body );
+
+			expect( onOpenChange ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'async confirm flow', () => {
+		it( 'disables buttons while confirm is pending', async () => {
+			const deferred = createDeferred();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ jest.fn() }
+					onConfirm={ () => deferred.promise }
+				>
+					<AlertDialog.Popup title="Async Test">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toHaveAttribute( 'aria-disabled', 'true' );
+			} );
+
+			expect(
+				screen.getByRole( 'button', { name: 'Cancel' } )
+			).toHaveAttribute( 'aria-disabled', 'true' );
+
+			await act( async () => {
+				deferred.resolve();
+			} );
+		} );
+
+		it( 'closes dialog when async confirm resolves', async () => {
+			const deferred = createDeferred();
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ onOpenChange }
+					onConfirm={ () => deferred.promise }
+				>
+					<AlertDialog.Popup title="Async Resolve">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await act( async () => {
+				deferred.resolve();
+			} );
+
+			await waitFor( () => {
+				expect( onOpenChange ).toHaveBeenCalledWith(
+					false,
+					expect.objectContaining( { reason: 'close-press' } )
+				);
+			} );
+		} );
+
+		it( 're-enables buttons when async confirm rejects (task failure)', async () => {
+			const deferred = createDeferred();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ jest.fn() }
+					onConfirm={ () => deferred.promise }
+				>
+					<AlertDialog.Popup title="Async Reject">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toHaveAttribute( 'aria-disabled', 'true' );
+			} );
+
+			await act( async () => {
+				deferred.reject( new Error( 'Task failed' ) );
+			} );
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).not.toHaveAttribute( 'aria-disabled', 'true' );
+			} );
+
+			expect(
+				screen.getByRole( 'button', { name: 'Cancel' } )
+			).not.toHaveAttribute( 'aria-disabled', 'true' );
+
+			expect( screen.getByText( 'Async Reject' ) ).toBeVisible();
+		} );
+
+		it( 'keeps dialog open when confirm returns { close: false }', async () => {
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ onOpenChange }
+					onConfirm={ () => ( { close: false } ) }
+				>
+					<AlertDialog.Popup title="Keep Open">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).not.toHaveAttribute( 'aria-disabled', 'true' );
+			} );
+
+			expect( onOpenChange ).not.toHaveBeenCalledWith(
+				false,
+				expect.anything()
+			);
+			expect( screen.getByText( 'Keep Open' ) ).toBeVisible();
+		} );
+
+		it( 'keeps dialog open when async confirm returns { close: false }', async () => {
+			const deferred = createDeferred();
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ onOpenChange }
+					onConfirm={ () => deferred.promise }
+				>
+					<AlertDialog.Popup title="Async Keep Open">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toHaveAttribute( 'aria-disabled', 'true' );
+			} );
+
+			await act( async () => {
+				deferred.resolve( { close: false } );
+			} );
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).not.toHaveAttribute( 'aria-disabled', 'true' );
+			} );
+
+			expect( onOpenChange ).not.toHaveBeenCalledWith(
+				false,
+				expect.anything()
+			);
+		} );
+
+		it( 'blocks dismiss while pending by default', async () => {
+			const deferred = createDeferred();
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ onOpenChange }
+					onConfirm={ () => deferred.promise }
+				>
+					<AlertDialog.Popup title="Block Dismiss">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toHaveAttribute( 'aria-disabled', 'true' );
+			} );
+
+			await userEvent.keyboard( '{Escape}' );
+
+			expect( onOpenChange ).not.toHaveBeenCalledWith(
+				false,
+				expect.anything()
+			);
+
+			await act( async () => {
+				deferred.resolve();
+			} );
+		} );
+
+		it( 'allows dismiss while pending with allowDismissWhilePending', async () => {
+			const deferred = createDeferred();
+			const onOpenChange = jest.fn();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ onOpenChange }
+					onConfirm={ () => deferred.promise }
+					allowDismissWhilePending
+				>
+					<AlertDialog.Popup title="Allow Dismiss">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toHaveAttribute( 'aria-disabled', 'true' );
+			} );
+
+			await userEvent.keyboard( '{Escape}' );
+
+			expect( onOpenChange ).toHaveBeenCalledWith(
+				false,
+				expect.objectContaining( { reason: 'escape-key' } )
+			);
+
+			await act( async () => {
+				deferred.resolve();
+			} );
+		} );
+
+		it( 'ignores duplicate confirm clicks while pending', async () => {
+			const onConfirm = jest.fn(
+				() =>
+					new Promise< void >( () => {
+						// Never resolves
+					} )
+			);
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ jest.fn() }
+					onConfirm={ onConfirm }
+				>
+					<AlertDialog.Popup title="Double Click">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			expect( onConfirm ).toHaveBeenCalledTimes( 1 );
+		} );
+	} );
+
+	describe( 'Popup onConfirm override', () => {
+		it( 'uses Popup onConfirm over Root onConfirm', async () => {
+			const rootConfirm = jest.fn();
+			const popupConfirm = jest.fn();
+
+			render(
+				<AlertDialog.Root
+					open
+					onOpenChange={ jest.fn() }
+					onConfirm={ rootConfirm }
+				>
+					<AlertDialog.Popup
+						title="Override Test"
+						onConfirm={ popupConfirm }
+					>
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'button', { name: 'OK' } )
+				).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'OK' } )
+			);
+
+			await waitFor( () => {
+				expect( popupConfirm ).toHaveBeenCalledTimes( 1 );
+			} );
+			expect( rootConfirm ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'uncontrolled mode', () => {
+		it( 'opens and closes via internal state', async () => {
+			const onConfirm = jest.fn();
+
+			render(
+				<AlertDialog.Root onConfirm={ onConfirm }>
+					<AlertDialog.Trigger>Open</AlertDialog.Trigger>
+					<AlertDialog.Popup title="Uncontrolled">
+						Content
+					</AlertDialog.Popup>
+				</AlertDialog.Root>
+			);
+
+			expect( screen.queryByText( 'Content' ) ).not.toBeInTheDocument();
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'Open' } )
+			);
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Uncontrolled' ) ).toBeVisible();
+			} );
+
+			await userEvent.click(
+				screen.getByRole( 'button', { name: 'Cancel' } )
+			);
+
+			await waitFor( () => {
+				expect(
+					screen.queryByText( 'Uncontrolled' )
+				).not.toBeInTheDocument();
+			} );
+		} );
 	} );
 } );
