@@ -1,7 +1,14 @@
 import type { AlertDialog as _AlertDialog } from '@base-ui/react/alert-dialog';
 import type { ReactNode } from 'react';
 
-import type { TriggerProps as DialogTriggerProps } from '../dialog/types';
+import type { ComponentProps } from '../utils/types';
+
+/**
+ * The return type of `onConfirm`. Return `void` (or nothing) to auto-close
+ * the dialog after the confirm handler completes. Return `{ close: false }`
+ * to keep the dialog open (e.g. for validation errors).
+ */
+export type ConfirmResult = void | { close?: boolean };
 
 export interface RootProps
 	extends Pick<
@@ -14,6 +21,44 @@ export interface RootProps
 	 */
 	children: ReactNode;
 
+	/**
+	 * Callback fired when the user confirms the action.
+	 *
+	 * - Synchronous handlers: the dialog closes immediately after the
+	 *   handler returns.
+	 * - Async handlers: the dialog enters a "pending" state (buttons
+	 *   disabled, spinner shown on the confirm button) until the promise
+	 *   settles.
+	 *
+	 * Return `{ close: false }` to keep the dialog open after the handler
+	 * completes (e.g. for server-side validation). Return `void` or
+	 * `{ close: true }` to close the dialog (the default).
+	 *
+	 * If the promise rejects (or the handler throws), the dialog stays
+	 * open and returns to idle. The consumer can display error UI via
+	 * `Popup`'s `children`.
+	 */
+	onConfirm?: () => ConfirmResult | Promise< ConfirmResult >;
+
+	/**
+	 * Whether to allow dismissing the dialog (via Escape key or cancel
+	 * button) while the confirm action is pending.
+	 *
+	 * @default false
+	 */
+	allowDismissWhilePending?: boolean;
+}
+
+export interface TriggerProps extends ComponentProps< 'button' > {
+	/**
+	 * The content to be rendered inside the component.
+	 */
+	children?: ReactNode;
+}
+
+export interface PopupProps
+	extends Omit< ComponentProps< 'div' >, 'title' >,
+		Pick< _AlertDialog.Popup.Props, 'initialFocus' | 'finalFocus' > {
 	/**
 	 * The semantic intent of the dialog, which determines its styling.
 	 *
@@ -28,56 +73,44 @@ export interface RootProps
 	 * @default 'default'
 	 */
 	intent?: 'default' | 'irreversible';
-}
 
-export type TriggerProps = DialogTriggerProps;
-
-export interface PopupProps {
 	/**
 	 * The title displayed in the dialog header. This serves as both the
 	 * visible heading and the accessible label for the dialog.
 	 */
-	title: string;
+	title: ReactNode;
 
 	/**
-	 * The message content displayed in the dialog body.
+	 * An optional description displayed below the title. Rendered using
+	 * Base UI's `AlertDialog.Description` for proper accessibility
+	 * association with the dialog.
 	 */
-	children: ReactNode;
+	description?: ReactNode;
 
 	/**
-	 * Callback fired when the user confirms the action.
+	 * Optional body content displayed between the description and the
+	 * action buttons. Use for additional context, form fields, or
+	 * error messages.
 	 */
-	onConfirm: () => void;
+	children?: ReactNode;
 
 	/**
 	 * Custom text for the confirm button.
 	 *
 	 * @default 'OK'
 	 */
-	confirmButtonText?: string;
+	confirmButtonText?: ReactNode;
 
 	/**
 	 * Custom text for the cancel button.
 	 *
 	 * @default 'Cancel'
 	 */
-	cancelButtonText?: string;
+	cancelButtonText?: ReactNode;
 
 	/**
-	 * Whether the confirm action is in a loading state (e.g. an async
-	 * operation is in progress). When `true`, the confirm button shows a
-	 * spinner and the cancel button is disabled.
-	 *
-	 * **Important:** Passing this prop — even as `false` — opts into
-	 * manual-close mode: the confirm button will no longer auto-close the
-	 * dialog. The consumer is responsible for setting `open={false}` when
-	 * the operation completes. Omit the prop entirely for the default
-	 * auto-close-on-confirm behavior.
-	 *
-	 * To implement an async confirm flow, use controlled mode
-	 * (`open` / `onOpenChange`) and manage the loading state externally:
-	 * prevent closing in `onOpenChange` while loading, and set
-	 * `open={false}` once the operation completes.
+	 * Callback fired when the user confirms the action.
+	 * Overrides the `onConfirm` provided on `Root` when set.
 	 */
-	loading?: boolean;
+	onConfirm?: () => ConfirmResult | Promise< ConfirmResult >;
 }

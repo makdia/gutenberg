@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+-   `AlertDialog`: Revise component API ([#76937](https://github.com/WordPress/gutenberg/pull/76937)):
+    -   `AlertDialog.Root`: moved `intent` prop to `AlertDialog.Popup`;
+    -   `AlertDialog.Popup`: moved `onConfirm` prop to `AlertDialog.Root`;
+    -   `AlertDialog.Popup`: removed `loading` prop (async flows are now handled internally via `Promise`-returning `onConfirm`);
+    -   `AlertDialog.Popup`: made `children` optional in favor of a new `description` prop, which describes the alert dialog semantically.
+
+### Internal
+
+-   `AlertDialog`: Rewrite internals to use Base UI's `AlertDialog` primitives directly instead of `Dialog` wrappers. Introduces an internal state machine for async confirm flows ([#76937](https://github.com/WordPress/gutenberg/pull/76937)).
+
 ## 0.10.0 (2026-04-01)
 
 ### New Features
