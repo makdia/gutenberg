@@ -120,9 +120,10 @@ function ParagraphBlock( {
 	} );
 	const blockEditingMode = useBlockEditingMode();
 	const isDefaultEditingMode = blockEditingMode === 'default';
+	const isContentEmpty = RichText.isEmpty( content );
 
 	let ariaLabel;
-	if ( ! RichText.isEmpty( content ) ) {
+	if ( ! isContentEmpty ) {
 		ariaLabel = __( 'Block: Paragraph' );
 	} else if ( isDefaultEditingMode ) {
 		ariaLabel = __(
@@ -164,7 +165,7 @@ function ParagraphBlock( {
 				onReplace={ onReplace }
 				onRemove={ onRemove }
 				aria-label={ ariaLabel }
-				data-empty={ RichText.isEmpty( content ) }
+				data-empty={ isContentEmpty }
 				placeholder={
 					placeholder ||
 					( isDefaultEditingMode
